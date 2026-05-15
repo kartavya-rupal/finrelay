@@ -50,15 +50,52 @@ Webhook source → API ingress → signature verification → raw storage → de
 - Analytics: ClickHouse
 - Search: OpenSearch
 
+## Current infrastructure
+
+Provisioned AWS resources:
+- RDS PostgreSQL instance
+- ElastiCache Redis instance
+- S3 archival bucket
+- SQS processing queue
+- SQS dead-letter queue
+- ECR repositories for:
+  - API service
+  - Worker service
+  - Dashboard service
+
+Configured environments:
+- Local development
+- AWS dev environment
+
+Region:
+- ap-south-1 (Mumbai)
+
 ## Phase plan
 
-### Phase 1
+### Phase 1 ✅ Completed
 Foundation setup:
-- repository
-- cloud accounts
+- repository initialization
+- AWS account and IAM setup
 - naming conventions
+- infrastructure provisioning
 - resource inventory
-- access strategy
+- PostgreSQL setup
+- Redis setup
+- S3 setup
+- SQS + DLQ setup
+- ECR repositories
+- architecture documentation
+
+#### Planned future integrations
+
+The following services are planned for later phases and are intentionally deferred during early development to reduce infrastructure cost and complexity:
+
+- ClickHouse
+- OpenSearch
+- Grafana
+- Loki
+- Prometheus
+- ECS/Fargate deployment
 
 ### Phase 2
 Documentation and architecture:
@@ -110,9 +147,19 @@ Observability and hardening:
 
 ## Current status
 
-- Planning stage
-- No production code committed yet
-- Documentation skeleton created first
+Phase 1 foundation setup completed.
+
+Completed infrastructure:
+- AWS account setup
+- IAM access configuration
+- PostgreSQL (RDS)
+- Redis cache (ElastiCache)
+- S3 archival bucket
+- SQS main queue + DLQ
+- ECR repositories
+- Docker and local tooling setup
+- GitHub repository structure
+- Initial architecture and system planning docs
 
 ## Notes
 
