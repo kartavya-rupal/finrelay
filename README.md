@@ -36,17 +36,24 @@ Webhook source → API ingress → signature verification → raw storage → de
 
 ## Core stack
 
+### Application stack
 - Frontend: Next.js, TypeScript, Tailwind CSS, shadcn/ui, Recharts
 - API: Node.js, TypeScript
+- Auth: JWT / Clerk / Auth.js
+
+### Data and messaging stack
 - Main DB: PostgreSQL
 - Cache: Redis
 - Queue: AWS SQS + DLQ
 - Storage: AWS S3
-- Observability: OpenTelemetry, Prometheus, Grafana, Loki
+
+### Infrastructure and delivery stack
 - Deployment: Docker, AWS ECS/Fargate
 - CI/CD: GitHub Actions
-- Auth: JWT / Clerk / Auth.js
 - Notifications: Slack / Email
+
+### Observability and future analytics stack
+- Observability: OpenTelemetry, Prometheus, Grafana, Loki
 - Analytics: ClickHouse
 - Search: OpenSearch
 
@@ -62,6 +69,9 @@ Provisioned AWS resources:
   - API service
   - Worker service
   - Dashboard service
+- ECS cluster foundation
+- CloudWatch log group
+- IAM roles and security groups
 
 Configured environments:
 - Local development
@@ -69,6 +79,47 @@ Configured environments:
 
 Region:
 - ap-south-1 (Mumbai)
+
+## What is already complete
+
+### Phase 1 ✅ Completed
+Foundation setup:
+- repository initialization
+- AWS account and IAM setup
+- naming conventions
+- infrastructure provisioning
+- resource inventory
+- PostgreSQL setup
+- Redis setup
+- S3 setup
+- SQS + DLQ setup
+- ECR repositories
+- ECS foundation
+- architecture documentation
+
+### Phase 2 ✅ Completed
+Architecture and planning:
+- scope definition
+- service boundaries
+- entity model
+- event lifecycle mapping
+- retry policy
+- replay policy
+- roles and permissions
+- data ownership
+- API surface
+- observability map
+- deferred items
+
+## Planned future integrations
+
+The following services are planned for later phases and are intentionally deferred during early development to reduce infrastructure cost and complexity:
+
+- ClickHouse
+- OpenSearch
+- Grafana
+- Loki
+- Prometheus
 
 ## Phase plan
 
@@ -84,26 +135,21 @@ Foundation setup:
 - S3 setup
 - SQS + DLQ setup
 - ECR repositories
+- ECS foundation
 - architecture documentation
 
-#### Planned future integrations
-
-The following services are planned for later phases and are intentionally deferred during early development to reduce infrastructure cost and complexity:
-
-- ClickHouse
-- OpenSearch
-- Grafana
-- Loki
-- Prometheus
-- ECS/Fargate deployment
-
-### Phase 2
+### Phase 2 ✅ Completed
 Documentation and architecture:
 - scope definition
 - system design
 - entity mapping
 - event lifecycle mapping
-- environment variable planning
+- retry policy
+- replay policy
+- access model
+- data ownership
+- API surface
+- observability mapping
 
 ### Phase 3
 Local development setup:
@@ -148,18 +194,8 @@ Observability and hardening:
 ## Current status
 
 Phase 1 foundation setup completed.
-
-Completed infrastructure:
-- AWS account setup
-- IAM access configuration
-- PostgreSQL (RDS)
-- Redis cache (ElastiCache)
-- S3 archival bucket
-- SQS main queue + DLQ
-- ECR repositories
-- Docker and local tooling setup
-- GitHub repository structure
-- Initial architecture and system planning docs
+Phase 2 architecture and planning completed.
+Next focus: local development setup and application scaffolding.
 
 ## Notes
 
