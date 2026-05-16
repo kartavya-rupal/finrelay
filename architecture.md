@@ -1,10 +1,10 @@
 # FinRelay Architecture
 
-## 1. What the project does
+## 1. Overview
 
 FinRelay is a fintech operations webhook reliability platform.
 
-Its purpose is to receive events from external systems, validate them, store them safely, process them asynchronously, recover from failures, and give operators visibility into event delivery health.
+It receives webhook events from external systems, verifies them, stores them safely, processes them asynchronously, handles retries and failures, supports replay, and gives operators visibility into event delivery health.
 
 The system is designed around reliability, replayability, observability, and operational control.
 
@@ -18,9 +18,9 @@ The project focuses on fintech-style events such as:
 
 ---
 
-## 2. Problem statement
+## 2. Problem Statement
 
-Webhook-driven systems are common in fintech, but they become hard to manage when:
+Webhook-driven systems are common in fintech, but they become difficult to manage when:
 - events are delivered more than once
 - downstream services fail temporarily
 - requests time out
@@ -29,11 +29,74 @@ Webhook-driven systems are common in fintech, but they become hard to manage whe
 - operators need visibility into delivery behavior
 - teams need analytics around retries, latency, and failure patterns
 
-FinRelay is meant to solve that reliability and observability layer.
+FinRelay solves that reliability and observability layer.
 
 ---
 
-## 3. System goals
+## 3. Current Status
+
+### Phase 1
+Completed foundation setup:
+- GitHub repository
+- AWS account and IAM setup
+- PostgreSQL RDS
+- Redis ElastiCache
+- S3 raw payload archive
+- SQS main queue + DLQ
+- ECR repositories
+- ECS cluster foundation
+- CloudWatch log group
+- security groups
+- local tooling setup
+
+### Phase 2
+Design phase completed:
+- scope definition
+- service boundaries
+- entity model
+- event state machine
+- retry policy
+- replay policy
+- roles and permissions
+- data ownership
+- API surface
+- observability map
+- deferred items
+
+### Current development focus
+- local application scaffolding
+- backend service implementation
+- webhook ingestion MVP
+- worker processing MVP
+- dashboard MVP
+
+---
+
+## 4. Phase 1 Infrastructure Foundation
+
+### Provisioned AWS resources
+- PostgreSQL RDS instance
+- Redis ElastiCache instance
+- S3 bucket for raw payload storage
+- SQS main processing queue
+- SQS dead-letter queue
+- ECR repositories for API, worker, and dashboard
+- ECS cluster foundation
+- IAM roles for ECS
+- CloudWatch log group
+- security groups
+
+### Local development setup
+- Git
+- Node.js
+- Docker
+- AWS CLI
+- PostgreSQL client
+- project docs and naming conventions
+
+---
+
+## 5. System Goals
 
 ### Functional goals
 - receive incoming webhook events
@@ -57,32 +120,32 @@ FinRelay is meant to solve that reliability and observability layer.
 - scalability
 - observability
 - modularity
-- clean separation between ingestion, processing, analytics, and operator experience
+- clear separation between ingestion, processing, analytics, and operator experience
 
 ---
 
-## 4. High-level event flow
+## 6. High-Level Event Flow
 
 1. An external fintech system sends a webhook to FinRelay.
 2. The API ingress layer accepts the request.
 3. The webhook signature and timestamp are validated.
-4. The raw payload is persisted.
-5. The event is checked for duplicates.
-6. The event is placed onto an SQS queue.
-7. A worker consumes the message.
-8. The worker processes the event and updates delivery state.
-9. Success or failure is written back to PostgreSQL.
-10. Failed events are retried with backoff.
-11. Poison messages are moved to the DLQ.
-12. Raw payloads are archived in S3.
-13. Event and delivery data are indexed for analytics and search.
+4. The raw payload is persisted in S3.
+5. The event is checked for duplicates using Redis and PostgreSQL.
+6. The event metadata is written to PostgreSQL.
+7. The event is placed onto the SQS main queue.
+8. A worker consumes the message.
+9. The worker processes the event and updates delivery state.
+10. Success or failure is written back to PostgreSQL.
+11. Failed events are retried with backoff.
+12. Poison messages are moved to the DLQ.
+13. The dashboard reads event history, attempts, and replay status.
 14. Metrics and traces are exported to the observability stack.
 15. Alerts are triggered when abnormal conditions are detected.
 16. Operators can inspect, search, and replay events from the dashboard.
 
 ---
 
-## 5. Service breakdown
+## 7. Service Breakdown
 
 ### Frontend
 - Next.js
@@ -244,7 +307,92 @@ Used for:
 
 ---
 
-## 6. Core entities
+## 8. Service Boundaries
+
+### Ingestion API
+Owns:
+- receiving webhook requests
+- validation
+- signature verification
+- timestamp freshness checks
+- raw payload persistence
+- dedupe initiation
+- queue enqueueing
+- fast 2xx response
+
+Must not own:
+- heavy business processing
+- replay logic
+- dashboard logic
+- analytics aggregation
+
+### Worker Service
+Owns:
+- consuming queue messages
+- processing webhook events
+- writing delivery attempt records
+- updating event status
+- retry decisions
+- failure classification
+- DLQ-related recovery support
+
+Must not own:
+- public request handling
+- UI rendering
+- auth/login logic
+- raw provider validation
+
+### Dashboard Backend
+Owns:
+- authentication
+- event history retrieval
+- endpoint management
+- retry history retrieval
+- DLQ inspection
+- replay actions
+- analytics summaries
+- audit log retrieval
+
+Must not own:
+- public webhook ingestion
+- low-level request signature verification
+- queue transport handling
+
+### Frontend Dashboard
+Owns:
+- login
+- event timeline view
+- endpoint management view
+- replay controls
+- DLQ browser
+- analytics charts
+- audit log views
+
+Must not own:
+- durable data storage
+- queue processing
+- signature validation
+- worker logic
+
+### Analytics Path
+Planned for later:
+- ClickHouse aggregates
+- trend charts
+- success/failure summaries
+- latency analysis
+- retry analysis
+
+### Search Path
+Planned for later:
+- payload search
+- event search
+- failed delivery search
+- log-style investigation
+- filtering by event type or endpoint
+
+---
+
+## 9. Core Entities
 
 ### Tenant
 Represents a business/customer account using the system.
@@ -349,9 +497,24 @@ Fields:
 - metadata
 - created_at
 
+### Analytics record
+Represents aggregated reporting data for charts.
+
+Fields:
+- id
+- tenant_id
+- endpoint_id
+- time_bucket
+- success_count
+- failure_count
+- retry_count
+- avg_latency
+- p95_latency
+- p99_latency
+
 ---
 
-## 7. Event lifecycle states
+## 10. Event Lifecycle States
 
 Proposed event states:
 - received
@@ -372,7 +535,7 @@ These states should be explicit in the data model so the dashboard can show a cl
 
 ---
 
-## 8. Reliability patterns used
+## 11. Reliability Patterns Used
 
 - signature verification
 - timestamp validation
@@ -387,50 +550,178 @@ These states should be explicit in the data model so the dashboard can show a cl
 
 ---
 
-## 9. Observability patterns used
+## 12. Replay Policy Summary
 
-- trace propagation using correlation IDs
-- API span instrumentation
-- queue processing spans
-- worker spans
-- DB query timing
-- failure reason tracking
-- Grafana dashboards
-- log aggregation in Loki
-- metrics collection in Prometheus
+Replay is operator-driven recovery.
+
+Replay uses:
+- the original event record from PostgreSQL
+- the original raw payload from S3
+- the related endpoint and tenant metadata
+
+Replay must:
+- preserve original history
+- create a replay job record
+- create a new attempt record
+- remain auditable
+- be permission controlled
+
+Replay states:
+- replay_requested
+- replay_processing
+- replay_succeeded
+- replay_failed
 
 ---
 
-## 10. Analytics strategy
+## 13. Roles and Permissions Summary
 
-Transactional data stays in PostgreSQL.
+### Admin
+- full dashboard control
+- endpoint management
+- alert rule management
+- replay permissions
+- user and role management
+- audit access
 
-Analytics-friendly aggregates are pushed to ClickHouse.
+### Operator
+- inspect events
+- inspect retries
+- inspect DLQ
+- replay events
+- view analytics
+- view logs
+- view audit logs
 
-Examples:
-- events per minute
-- success rate by endpoint
-- failure rate by event type
-- retry histogram
-- p95 / p99 latency
-- DLQ trends
+### Viewer
+- read-only access to dashboards
+- event summaries
+- analytics charts
+- limited audit views
+
+---
+
+## 14. Data Ownership
+
+### Ingestion API owns
+- webhook intake
+- validation
+- early state changes
+- queue enqueueing
+
+### Worker service owns
+- event processing
+- delivery attempt records
+- retry outcomes
+- DLQ classification
+
+### Dashboard backend owns
+- read APIs
+- replay requests
+- endpoint configuration
+- alert rules
+- audit logs
+
+### PostgreSQL owns
+- durable business state
+
+### Redis owns
+- temporary fast state
+
+### S3 owns
+- raw payloads
+- replay snapshots
+- archives
+
+### SQS owns
+- message transport
+
+### DLQ owns
+- poison messages
+
+### ClickHouse owns later
+- analytics aggregates
+
+### OpenSearch owns later
+- searchable payloads and logs
+
+---
+
+## 15. API Surface
+
+### Ingestion API
+- POST /webhooks/:provider
+- POST /webhooks/:provider/test
+
+### Event APIs
+- GET /events
+- GET /events/:id
+- GET /events/:id/attempts
+
+### Endpoint APIs
+- GET /endpoints
+- POST /endpoints
+- PATCH /endpoints/:id
+
+### Replay APIs
+- POST /events/:id/replay
+- GET /replay-jobs
+
+### Analytics APIs
+- GET /analytics/summary
+
+### Alert APIs
+- GET /alerts
+
+### Audit APIs
+- GET /audit-logs
+
+---
+
+## 16. Observability Map
+
+### Trace points
+- webhook request arrival
+- signature verification
+- S3 write
+- Redis dedupe check
+- queue publish
+- worker start
+- worker finish
+- retry scheduling
+- DLQ move
+- replay execution
+
+### Metrics
+- request count
+- success count
+- failure count
+- retry count
+- DLQ count
+- queue lag
+- worker processing time
 - replay success rate
+- endpoint failure rate
+
+### Logs
+- request logs
+- worker logs
+- retry logs
+- replay logs
+- error logs
+- audit logs
+
+### Planned destinations
+- OpenTelemetry
+- Prometheus
+- Grafana
+- Loki
+- ClickHouse later
+- OpenSearch later
 
 ---
 
-## 11. Search strategy
-
-OpenSearch is used for:
-- full-text search across payloads
-- failed event investigation
-- event type filtering
-- error message lookup
-- operator notes
-- incident investigation
-
----
-
-## 12. Security strategy
+## 17. Security Strategy
 
 - tenant isolation
 - role-based dashboard access
@@ -444,9 +735,24 @@ OpenSearch is used for:
 
 ---
 
-## 13. Phase plan
+## 18. Deferred Items
 
-### Phase 1
+The following are intentionally deferred for later phases:
+- full ClickHouse implementation
+- full OpenSearch implementation
+- advanced alert routing
+- multi-region failover
+- Kubernetes
+- Terraform / full IaC automation
+- advanced autoscaling
+- rich reporting engine
+- public SaaS onboarding flows
+
+---
+
+## 19. Phase Plan
+
+### Phase 1 ✅ Completed
 Foundation setup:
 - repo
 - docs
@@ -455,13 +761,18 @@ Foundation setup:
 - resource inventory
 - access strategy
 
-### Phase 2
+### Phase 2 ✅ Completed
 Architecture and planning:
 - service boundaries
 - entity model
 - event state model
-- environment variable design
-- flow diagrams
+- retry policy
+- replay policy
+- roles and permissions
+- data ownership
+- API surface
+- observability mapping
+- deferred items
 
 ### Phase 3
 Local development setup:
@@ -505,7 +816,7 @@ Observability and hardening:
 
 ---
 
-## 14. Success criteria
+## 20. Success Criteria
 
 The project is successful if it can:
 - receive fintech-style webhooks reliably
